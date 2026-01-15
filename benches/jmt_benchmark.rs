@@ -1,6 +1,5 @@
 use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use jmt::{JellyfishMerkleTree, storage::{TreeReader, TreeWriter, NodeBatch}, KeyHash, Version, SimpleHasher};
-use tempfile::TempDir;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use anyhow;
@@ -61,7 +60,7 @@ impl TreeWriter for InMemoryTreeStore {
             store.insert(key_bytes, node_bytes);
         }
         
-        for ((version, key_hash), value_option) in node_batch.values() {
+        for ((_, key_hash), value_option) in node_batch.values() {
             if let Some(value) = value_option {
                 store.insert(key_hash.0.to_vec(), value.clone());
             } else {
@@ -95,9 +94,8 @@ fn jmt_insert_benchmark(c: &mut Criterion) {
                         for (key, value) in pairs {
                             let key_hash = KeyHash(sha2::Sha256::hash(&key));
                             let (_new_root, _proof) = jmt.put_value_set(
-                                &mut store,
-                                0, // version
-                                vec![(key_hash, Some(value))]
+                                vec![(key_hash, Some(value))],
+                                0
                             ).unwrap();
                         }
                     },
@@ -131,9 +129,8 @@ fn jmt_get_benchmark(c: &mut Criterion) {
                     .collect();
                 
                 let (_root, _batch) = jmt.put_value_set(
-                    &mut store,
-                    0,
-                    key_val_pairs
+                    key_val_pairs,
+                    0
                 ).unwrap();
 
                 b.iter(|| {
@@ -170,9 +167,8 @@ fn jmt_update_benchmark(c: &mut Criterion) {
                     .collect();
                 
                 let (_root, _batch) = jmt.put_value_set(
-                    &mut store,
-                    0,
-                    key_val_pairs
+                    key_val_pairs,
+                    0
                 ).unwrap();
 
                 b.iter(|| {
@@ -182,10 +178,9 @@ fn jmt_update_benchmark(c: &mut Criterion) {
                         .collect();
                         
                     let (_new_root, _batch) = jmt.put_value_set(
-                        &mut store,
-                        1,
-                        update_pairs
-                    ).unwrap(); // new version
+                        update_pairs,
+                        1
+                    ).unwrap();
                 });
             },
         );
