@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use jmt::{JellyfishMerkleTree, storage::{TreeReader, TreeWriter, NodeBatch}, KeyHash, Version, SimpleHasher};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
