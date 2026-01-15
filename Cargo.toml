@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 jmt = "0.12.0"
+blake2 = "0.10"
 
 [dev-dependencies]
 criterion = "0.5"

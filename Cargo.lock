@@ -990,6 +990,7 @@ dependencies = [
  "anyhow",
  "bcs",
  "bincode",
+ "blake2",
  "criterion",
  "jmt",
  "sha2",

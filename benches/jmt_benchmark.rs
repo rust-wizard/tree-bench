@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use anyhow;
 use bincode;
+use blake2::Blake2s256;
 
 struct InMemoryTreeStore {
     store: Arc<RwLock<HashMap<Vec<u8>, Vec<u8>>>>,
@@ -83,14 +84,14 @@ fn jmt_insert_benchmark(c: &mut Criterion) {
                 b.iter_batched(
                     || {
                         // Create a fresh tree store for each benchmark iteration
-                        let mut store = InMemoryTreeStore::new();
-                        let jmt = JellyfishMerkleTree::new(&store);
+                        let store = InMemoryTreeStore::new();
+                        let jmt: JellyfishMerkleTree<'_, InMemoryTreeStore, Blake2s256> = JellyfishMerkleTree::new(&store);
                         let pairs: Vec<(Vec<u8>, Vec<u8>)> = (0..size)
                             .map(|i| (format!("key{}", i).into_bytes(), format!("value{}", i).into_bytes()))
                             .collect();
-                        (store, jmt, pairs)
+                        (jmt, pairs)
                     },
-                    |(mut store, jmt, pairs)| {
+                    |(jmt, pairs)| {
                         for (key, value) in pairs {
                             let key_hash = KeyHash(sha2::Sha256::hash(&key));
                             let (_new_root, _proof) = jmt.put_value_set(
@@ -116,8 +117,8 @@ fn jmt_get_benchmark(c: &mut Criterion) {
             size,
             |b, &size| {
                 // Create a JMT with pre-populated data
-                let mut store = InMemoryTreeStore::new();
-                let jmt = JellyfishMerkleTree::new(&store);
+                let store = InMemoryTreeStore::new();
+                let jmt: JellyfishMerkleTree<'_, InMemoryTreeStore, Blake2s256> = JellyfishMerkleTree::new(&store);
                 
                 // Pre-populate the tree
                 let keys: Vec<Vec<u8>> = (0..size).map(|i| format!("key{}", i).into_bytes()).collect();
@@ -154,8 +155,8 @@ fn jmt_update_benchmark(c: &mut Criterion) {
             size,
             |b, &size| {
                 // Create a JMT with pre-populated data
-                let mut store = InMemoryTreeStore::new();
-                let jmt = JellyfishMerkleTree::new(&store);
+                let store = InMemoryTreeStore::new();
+                let jmt: JellyfishMerkleTree<'_, InMemoryTreeStore, Blake2s256> = JellyfishMerkleTree::new(&store);
                 
                 // Pre-populate the tree
                 let keys: Vec<Vec<u8>> = (0..size).map(|i| format!("key{}", i).into_bytes()).collect();
