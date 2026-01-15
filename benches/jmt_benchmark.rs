@@ -1,10 +1,11 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use jmt::{JellyfishMerkleTree, storage::{TreeReader, TreeWriter, NodeBatch}, KeyHash, Version, SimpleHasher};
+use jmt::{JellyfishMerkleTree, storage::{TreeReader, TreeWriter, NodeBatch}, KeyHash, Version};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use anyhow;
 use bincode;
 use blake2::Blake2s256;
+use sha2::{Digest, Sha256};
 
 struct InMemoryTreeStore {
     store: Arc<RwLock<HashMap<Vec<u8>, Vec<u8>>>>,
@@ -90,7 +91,10 @@ fn jmt_insert_benchmark(c: &mut Criterion) {
                         .collect();
                     
                     for (key, value) in pairs {
-                        let key_hash = KeyHash(sha2::Sha256::hash(&key));
+                        let mut hasher = Sha256::new();
+                        hasher.update(&key);
+                        let hash_bytes: [u8; 32] = hasher.finalize().into();
+                        let key_hash = KeyHash(hash_bytes);
                         let (_new_root, _proof) = jmt.put_value_set(
                             vec![(key_hash, Some(value))],
                             0
@@ -122,7 +126,12 @@ fn jmt_get_benchmark(c: &mut Criterion) {
                     
                     let key_val_pairs: Vec<_> = keys.iter().cloned()
                         .zip(values.iter().cloned().map(Some))
-                        .map(|(k, v)| (KeyHash(sha2::Sha256::hash(&k)), v))
+                        .map(|(k, v)| {
+                            let mut hasher = Sha256::new();
+                            hasher.update(&k);
+                            let hash_bytes: [u8; 32] = hasher.finalize().into();
+                            (KeyHash(hash_bytes), v)
+                        })
                         .collect();
                     
                     let (_root, _batch) = jmt.put_value_set(
@@ -131,7 +140,10 @@ fn jmt_get_benchmark(c: &mut Criterion) {
                     ).unwrap();
 
                     for key in &keys {
-                        let key_hash = KeyHash(sha2::Sha256::hash(key));
+                        let mut hasher = Sha256::new();
+                        hasher.update(key);
+                        let hash_bytes: [u8; 32] = hasher.finalize().into();
+                        let key_hash = KeyHash(hash_bytes);
                         let _result = jmt.get_with_proof(key_hash, 0).unwrap();
                     }
                 });
@@ -160,7 +172,12 @@ fn jmt_update_benchmark(c: &mut Criterion) {
                     
                     let key_val_pairs: Vec<_> = keys.iter().cloned()
                         .zip(values.iter().cloned().map(Some))
-                        .map(|(k, v)| (KeyHash(sha2::Sha256::hash(k)), v))
+                        .map(|(k, v)| {
+                            let mut hasher = Sha256::new();
+                            hasher.update(&k);
+                            let hash_bytes: [u8; 32] = hasher.finalize().into();
+                            (KeyHash(hash_bytes), v)
+                        })
                         .collect();
                     
                     let (_root, _batch) = jmt.put_value_set(
@@ -170,7 +187,12 @@ fn jmt_update_benchmark(c: &mut Criterion) {
 
                     let update_pairs: Vec<_> = keys.iter().cloned()
                         .zip((0..size).map(|i| Some(format!("updated_value{}", i).into_bytes())))
-                        .map(|(k, v)| (KeyHash(sha2::Sha256::hash(k)), v))
+                        .map(|(k, v)| {
+                            let mut hasher = Sha256::new();
+                            hasher.update(&k);
+                            let hash_bytes: [u8; 32] = hasher.finalize().into();
+                            (KeyHash(hash_bytes), v)
+                        })
                         .collect();
                         
                     let (_new_root, _batch) = jmt.put_value_set(
