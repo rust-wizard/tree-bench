@@ -81,27 +81,22 @@ fn jmt_insert_benchmark(c: &mut Criterion) {
             BenchmarkId::new("insert", *size),
             size,
             |b, &size| {
-                b.iter_batched(
-                    || {
-                        // Create a fresh tree store for each benchmark iteration
-                        let store = InMemoryTreeStore::new();
-                        let jmt: JellyfishMerkleTree<'_, InMemoryTreeStore, Blake2s256> = JellyfishMerkleTree::new(&store);
-                        let pairs: Vec<(Vec<u8>, Vec<u8>)> = (0..size)
-                            .map(|i| (format!("key{}", i).into_bytes(), format!("value{}", i).into_bytes()))
-                            .collect();
-                        (jmt, pairs)
-                    },
-                    |(jmt, pairs)| {
-                        for (key, value) in pairs {
-                            let key_hash = KeyHash(sha2::Sha256::hash(&key));
-                            let (_new_root, _proof) = jmt.put_value_set(
-                                vec![(key_hash, Some(value))],
-                                0
-                            ).unwrap();
-                        }
-                    },
-                    BatchSize::SmallInput,
-                );
+                b.iter(|| {
+                    // Create a fresh tree store for each benchmark iteration
+                    let store = InMemoryTreeStore::new();
+                    let jmt: JellyfishMerkleTree<'_, InMemoryTreeStore, Blake2s256> = JellyfishMerkleTree::new(&store);
+                    let pairs: Vec<(Vec<u8>, Vec<u8>)> = (0..size)
+                        .map(|i| (format!("key{}", i).into_bytes(), format!("value{}", i).into_bytes()))
+                        .collect();
+                    
+                    for (key, value) in pairs {
+                        let key_hash = KeyHash(sha2::Sha256::hash(&key));
+                        let (_new_root, _proof) = jmt.put_value_set(
+                            vec![(key_hash, Some(value))],
+                            0
+                        ).unwrap();
+                    }
+                });
             },
         );
     }
@@ -116,25 +111,25 @@ fn jmt_get_benchmark(c: &mut Criterion) {
             BenchmarkId::new("get", *size),
             size,
             |b, &size| {
-                // Create a JMT with pre-populated data
-                let store = InMemoryTreeStore::new();
-                let jmt: JellyfishMerkleTree<'_, InMemoryTreeStore, Blake2s256> = JellyfishMerkleTree::new(&store);
-                
-                // Pre-populate the tree
-                let keys: Vec<Vec<u8>> = (0..size).map(|i| format!("key{}", i).into_bytes()).collect();
-                let values: Vec<Vec<u8>> = (0..size).map(|i| format!("value{}", i).into_bytes()).collect();
-                
-                let key_val_pairs: Vec<_> = keys.iter().cloned()
-                    .zip(values.iter().cloned().map(Some))
-                    .map(|(k, v)| (KeyHash(sha2::Sha256::hash(&k)), v))
-                    .collect();
-                
-                let (_root, _batch) = jmt.put_value_set(
-                    key_val_pairs,
-                    0
-                ).unwrap();
-
                 b.iter(|| {
+                    // Create a JMT with pre-populated data
+                    let store = InMemoryTreeStore::new();
+                    let jmt: JellyfishMerkleTree<'_, InMemoryTreeStore, Blake2s256> = JellyfishMerkleTree::new(&store);
+                    
+                    // Pre-populate the tree
+                    let keys: Vec<Vec<u8>> = (0..size).map(|i| format!("key{}", i).into_bytes()).collect();
+                    let values: Vec<Vec<u8>> = (0..size).map(|i| format!("value{}", i).into_bytes()).collect();
+                    
+                    let key_val_pairs: Vec<_> = keys.iter().cloned()
+                        .zip(values.iter().cloned().map(Some))
+                        .map(|(k, v)| (KeyHash(sha2::Sha256::hash(&k)), v))
+                        .collect();
+                    
+                    let (_root, _batch) = jmt.put_value_set(
+                        key_val_pairs,
+                        0
+                    ).unwrap();
+
                     for key in &keys {
                         let key_hash = KeyHash(sha2::Sha256::hash(key));
                         let _result = jmt.get_with_proof(key_hash, 0).unwrap();
@@ -154,25 +149,25 @@ fn jmt_update_benchmark(c: &mut Criterion) {
             BenchmarkId::new("update", *size),
             size,
             |b, &size| {
-                // Create a JMT with pre-populated data
-                let store = InMemoryTreeStore::new();
-                let jmt: JellyfishMerkleTree<'_, InMemoryTreeStore, Blake2s256> = JellyfishMerkleTree::new(&store);
-                
-                // Pre-populate the tree
-                let keys: Vec<Vec<u8>> = (0..size).map(|i| format!("key{}", i).into_bytes()).collect();
-                let values: Vec<Vec<u8>> = (0..size).map(|i| format!("value{}", i).into_bytes()).collect();
-                
-                let key_val_pairs: Vec<_> = keys.iter().cloned()
-                    .zip(values.iter().cloned().map(Some))
-                    .map(|(k, v)| (KeyHash(sha2::Sha256::hash(k)), v))
-                    .collect();
-                
-                let (_root, _batch) = jmt.put_value_set(
-                    key_val_pairs,
-                    0
-                ).unwrap();
-
                 b.iter(|| {
+                    // Create a JMT with pre-populated data
+                    let store = InMemoryTreeStore::new();
+                    let jmt: JellyfishMerkleTree<'_, InMemoryTreeStore, Blake2s256> = JellyfishMerkleTree::new(&store);
+                    
+                    // Pre-populate the tree
+                    let keys: Vec<Vec<u8>> = (0..size).map(|i| format!("key{}", i).into_bytes()).collect();
+                    let values: Vec<Vec<u8>> = (0..size).map(|i| format!("value{}", i).into_bytes()).collect();
+                    
+                    let key_val_pairs: Vec<_> = keys.iter().cloned()
+                        .zip(values.iter().cloned().map(Some))
+                        .map(|(k, v)| (KeyHash(sha2::Sha256::hash(k)), v))
+                        .collect();
+                    
+                    let (_root, _batch) = jmt.put_value_set(
+                        key_val_pairs,
+                        0
+                    ).unwrap();
+
                     let update_pairs: Vec<_> = keys.iter().cloned()
                         .zip((0..size).map(|i| Some(format!("updated_value{}", i).into_bytes())))
                         .map(|(k, v)| (KeyHash(sha2::Sha256::hash(k)), v))
